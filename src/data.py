@@ -4,11 +4,11 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset
 
 
 class ResponseDataset(Dataset):
-    def __init__(self, input_file, min_coverage, split_ratio=(0.8, 0.1, 0.1), seed=42):
+    def __init__(self, input_file, min_coverage, do_normalize=False, split_ratio=(0.8, 0.1, 0.1), seed=42):
         super().__init__()
 
         self.min_coverage = min_coverage
@@ -32,7 +32,9 @@ class ResponseDataset(Dataset):
             if idx not in self.drop_columns
         ]
 
-        # self.normalize()
+        if do_normalize:
+            self.normalize()
+
         self.training_indices, self.val_indices, self.test_indices = self.build_split(split_ratio, seed)
 
     def build_split(self, split_ratio, seed):
@@ -50,6 +52,17 @@ class ResponseDataset(Dataset):
         test_idx = indices[n_train + n_val:]
 
         return train_idx, val_idx, test_idx
+
+    def get_split(self, split):
+        assert split in ['train', 'val', 'test', 'full']
+        if split == 'train':
+            return Subset(self, indices=self.training_indices)
+        elif split == 'val':
+            return Subset(self, indices=self.val_indices)
+        elif split == 'test':
+            return Subset(self, indices=self.test_indices)
+        else:
+            return self
 
     def __getitem__(self, idx):
         return {
